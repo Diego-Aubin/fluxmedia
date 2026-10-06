@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>TD1 - Exercice 9</title>
+  <style>
+    .preview-box { margin-top: 15px; padding: 10px; border: 1px solid #ccc; }
+    img, canvas { max-width: 300px; display: block; margin-bottom: 5px; }
+  </style>
+</head>
+<body>
+
+  <h1>API ImageCapture (takePhoto vs grabFrame)</h1>
+  <video id="video" width="400" autoplay playsinline></video>
+  <br>
+  <button id="start">Démarrer Caméra</button>
+  <button id="btnTakePhoto" disabled>Take Photo (Haute Résolution)</button>
+  <button id="btnGrabFrame" disabled>Grab Frame (Instant's Frame)</button>
+
+  <div class="preview-box">
+    <h3>Résultat takePhoto() :</h3>
+    <img id="imgTakePhoto" alt="Aperçu takePhoto">
+    <a id="downloadTakePhoto" style="display:none;">Télécharger la photo</a>
+  </div>
+
+  <div class="preview-box">
+    <h3>Résultat grabFrame() :</h3>
+    <canvas id="canvasGrabFrame"></canvas>
+    <a id="downloadGrabFrame" style="display:none;">Télécharger le frame</a>
+  </div>
+
+  <script>
+    let imageCapture = null;
+    const video = document.getElementById('video');
+    const btnStart = document.getElementById('start');
+    const btnTakePhoto = document.getElementById('btnTakePhoto');
+    const btnGrabFrame = document.getElementById('btnGrabFrame');
+
+    btnStart.addEventListener('click', async () => {
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+        video.srcObject = stream;
+        
+        const track = stream.getVideoTracks()[0];
+        
+        // Vérification de la compatibilité de l'API ImageCapture
+        if ('ImageCapture' in window) {
+          imageCapture = new ImageCapture(track);
+          btnTakePhoto.disabled = false;
+          btnGrabFrame.disabled = false;
+        } else {
+          alert("L'API ImageCapture n'est pas supportée par ce navigateur.");
+        }
+      } catch (err) {
+        console.error("Erreur d'accès à la caméra :", err);
+      }
+    });
+
+    // 1. Technique 2 : takePhoto()
+    btnTakePhoto.addEventListener('click', async () => {
+      try {
+        const blob = await imageCapture.takePhoto();
+        const imgUrl = URL.createObjectURL(blob);
+        
+        const img = document.getElementById('imgTakePhoto');
+        img.src = imgUrl;
+
+        const link = document.getElementById('downloadTakePhoto');
+        link.href = imgUrl;
+        link.download = 'takePhoto-result.jpg';
+        link.style.display = 'inline';
+        link.textContent = 'Télécharger la photo HD';
+      } catch (err) {
+        console.error("Erreur takePhoto():", err);
+      }
+    });
+
+    // 2. Technique 1 : grabFrame()
+    btnGrabFrame.addEventListener('click', async () => {
+      try {
+        const imageBitmap = await imageCapture.grabFrame();
+        const canvas = document.getElementById('canvasGrabFrame');
+        
+        canvas.width = imageBitmap.width;
+        canvas.height = imageBitmap.height;
+        const ctx = canvas.getContext('2d');
+        ctx.drawImage(imageBitmap, 0, 0);
+
+        // Préparation du téléchargement du canvas
+        const link = document.getElementById('downloadGrabFrame');
+        canvas.toBlob((blob) => {
+          const url = URL.createObjectURL(blob);
+          link.href = url;
+          link.download = 'grabFrame-result.png';
+          link.style.display = 'inline';
+          link.textContent = 'Télécharger le frame PNG';
+        });
+
+      } catch (err) {
+        console.error("Erreur grabFrame():", err);
+      }
+    });
+  </script>
+</body>
+</html>
